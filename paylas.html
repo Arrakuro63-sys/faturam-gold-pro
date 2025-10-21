@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paylaşılan Faturam Gold</title>
+<style>
+body { font-family: Arial, sans-serif; margin:20px; background:#fffbe6; color:#333;}
+table { border-collapse: collapse; width:100%; user-select:text;}
+th, td { border:1px solid #ffd700; padding:5px; text-align:center;}
+th { background:#fff2b2; }
+td { outline:none; }
+</style>
+</head>
+<body>
+<h1>Paylaşılan Faturam Gold Projesi</h1>
+<table id="excelTable"></table>
+
+<script>
+let tableHeaders=[];
+let tableData=[];
+let selectedCell=null;
+
+function renderTable(){
+    const table=document.getElementById('excelTable');
+    table.innerHTML='';
+    let headerRow=table.insertRow();
+    let thIndex=document.createElement('th'); thIndex.innerText="#"; headerRow.appendChild(thIndex);
+    tableHeaders.forEach(h=>{ let th=document.createElement('th'); th.innerText=h; headerRow.appendChild(th); });
+    tableData.forEach((row,r)=>{
+        let tr=table.insertRow();
+        let tdIndex=tr.insertCell(); tdIndex.innerText=r+1;
+        row.forEach((cell,c)=>{
+            let td=tr.insertCell(); td.contentEditable=true; td.innerText=cell;
+            td.addEventListener('focus',()=>selectedCell=td);
+            td.addEventListener('input',()=>tableData[r][c]=td.innerText);
+        });
+    });
+}
+
+window.onload=()=>{
+    const saved=localStorage.getItem('faturamGoldProject');
+    if(saved){
+        try{
+            const obj=JSON.parse(saved);
+            tableHeaders=obj.headers; tableData=obj.rows;
+        }catch(e){}
+    }
+    renderTable();
+};
+</script>
+</body>
+</html>

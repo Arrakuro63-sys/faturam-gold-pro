@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faturam Gold - Gelişmiş Tablo</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#fffbe6; color:#333;}
+header { background:#ffd700; color:white; display:flex; align-items:center; padding:10px 20px; gap:15px;}
+header img { height:40px; }
+header h1 { margin:0; font-size:22px; font-weight:bold;}
+#controls, #miniToolbar, #rowControls { padding:10px; display:flex; gap:10px; background:#fff8dc; flex-wrap:wrap;}
+button, select, input[type=number]{ padding:6px 10px; border:none; border-radius:4px; background:#ffd700; color:#333; font-weight:bold; cursor:pointer;}
+button:hover, select:hover, input:hover{ background:#ffcc00;}
+table { border-collapse: collapse; width:100%; margin-top:10px; background:white; user-select:text;}
+th, td { border:1px solid #ffd700; min-width:80px; height:30px; text-align:center; padding:2px; position:relative;}
+th { background:#fff2b2; font-weight:bold;}
+input.cell-input { width:100%; height:100%; border:none; text-align:center; font-weight:bold; background:#fff;}
+input.cell-input:focus { outline:2px solid #ffd700; background:#fffacd;}
+footer { text-align:center; padding:10px; background:#ffd700; color:white; font-weight:bold; margin-top:20px;}
+#shareOptions { display:none; position:absolute; background:#fff8dc; padding:10px; border:1px solid #ffd700; border-radius:6px; top:50px; left:10px; flex-direction:column; gap:5px; z-index:100;}
+#shareOptions button { width:150px; }
+</style>
+</head>
+<body>
+
+<header>
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRwNsJToes3vMaHCm2DHoiwJP4X7aZ-1m4Og&s" alt="Logo">
+    <h1>Faturam Gold</h1>
+</header>
+
+<div id="controls">
+    <button onclick="newTable()">Yeni Oluştur</button>
+    <button id="shareBtn">Projeyi Paylaş</button>
+</div>
+
+<div id="rowControls">
+    <button onclick="addRow()">Satır Ekle</button>
+    <button onclick="removeRow()">Satır Sil</button>
+</div>
+
+<div id="miniToolbar">
+    <label>Font:
+        <select id="fontSelect">
+            <option>Arial</option>
+            <option>Verdana</option>
+            <option>Times New Roman</option>
+            <option>Courier New</option>
+        </select>
+    </label>
+    <label>Boyut:
+        <input type="number" id="fontSize" value="14" min="8" max="36">
+    </label>
+    <button onclick="toggleBold()">B</button>
+    <button onclick="toggleItalic()">I</button>
+    <button onclick="toggleUnderline()">U</button>
+    <label>Yazı Rengi:
+        <input type="color" id="fontColor" value="#000000">
+    </label>
+    <label>Hücre Rengi:
+        <input type="color" id="bgColor" value="#ffffff">
+    </label>
+</div>
+
+<table id="excelTable"></table>
+
+<div id="shareOptions">
+    <button onclick="exportPDF()">PDF Olarak Paylaş</button>
+    <button onclick="exportPNG()">PNG Olarak Paylaş</button>
+    <button onclick="generateURL()">URL Oluştur</button>
+</div>
+
+<footer>Faturam Gold</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const { jsPDF } = window.jspdf;
+
+let tableHeaders = ["Kullanıcı Adı", "Geçiş Tarihi", "Şehir", "Fiyat"];
+let tableData = [];
+let defaultRows = 10;
+let defaultCols = tableHeaders.length;
+let selectedCell = null;
+let styleState = {bold:false, italic:false, underline:false};
+
+// URL’den veri yükle (düzeltildi)
+function loadFromURL(){
+    const params = new URLSearchParams(window.location.search);
+    if(params.has('data')){
+        try{
+            const decoded = JSON.parse(atob(decodeURIComponent(params.get('data'))));
+            tableData = decoded;
+            defaultRows = tableData.length;
+            defaultCols = tableData[0] ? tableData[0].length : tableHeaders.length;
+            renderTable();
+        }catch(e){
+            console.log('URL veri hatası', e);
+            newTable();
+        }
+    } else {
+        newTable();
+    }
+}
+
+// Yeni tablo oluştur
+function newTable(){
+    tableData = Array.from({length: defaultRows}, ()=>Array(defaultCols).fill(''));
+    renderTable();
+}
+
+// Tablo render
+function renderTable(){
+    const table = document.getElementById('excelTable');
+    table.innerHTML = '';
+
+    // Header
+    let headerRow = table.insertRow();
+    let thIndex = document.createElement('th');
+    thIndex.innerText = "#";
+    headerRow.appendChild(thIndex);
+    tableHeaders.forEach((h)=>{
+        let th = document.createElement('th');
+        th.innerText = h;
+        headerRow.appendChild(th);
+    });
+
+    // Body
+    tableData.forEach((row,r)=>{
+        let tr = table.insertRow();
+        let tdIndex = tr.insertCell();
+        tdIndex.innerText = r+1;
+
+        row.forEach((cell,c)=>{
+            let td = tr.insertCell();
+            let input = document.createElement('input');
+            input.type='text';
+            input.className='cell-input';
+            input.value = cell;
+            input.addEventListener('input', ()=>tableData[r][c] = input.value);
+            input.addEventListener('focus', ()=>selectedCell=input);
+            td.appendChild(input);
+        });
+    });
+
+    makeResizable(table);
+}
+
+// Satır ekle/sil
+function addRow(){ tableData.push(Array(defaultCols).fill('')); renderTable(); }
+function removeRow(){ if(tableData.length>1){ tableData.pop(); renderTable(); }}
+
+// Stil uygulama
+function applyStyle(){
+    if(!selectedCell) return;
+    selectedCell.style.fontFamily = document.getElementById('fontSelect').value;
+    selectedCell.style.fontSize = document.getElementById('fontSize').value+'px';
+    selectedCell.style.fontWeight = styleState.bold ? 'bold' : 'normal';
+    selectedCell.style.fontStyle = styleState.italic ? 'italic' : 'normal';
+    selectedCell.style.textDecoration = styleState.underline ? 'underline' : 'none';
+    selectedCell.style.color = document.getElementById('fontColor').value;
+    selectedCell.style.backgroundColor = document.getElementById('bgColor').value;
+}
+
+document.getElementById('fontSelect').addEventListener('change', applyStyle);
+document.getElementById('fontSize').addEventListener('change', applyStyle);
+document.getElementById('fontColor').addEventListener('change', applyStyle);
+document.getElementById('bgColor').addEventListener('change', applyStyle);
+function toggleBold(){ styleState.bold=!styleState.bold; applyStyle();}
+function toggleItalic(){ styleState.italic=!styleState.italic; applyStyle();}
+function toggleUnderline(){ styleState.underline=!styleState.underline; applyStyle();}
+
+// Paylaşım seçenekleri
+const shareBtn = document.getElementById('shareBtn');
+const shareOptions = document.getElementById('shareOptions');
+shareBtn.addEventListener('click', ()=>{
+    shareOptions.style.display = shareOptions.style.display==='flex' ? 'none' : 'flex';
+});
+
+// PDF oluştur
+function exportPDF(){
+    html2canvas(document.getElementById('excelTable')).then(canvas=>{
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p','pt','a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = pageWidth - 40;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+
+        const logo = new Image();
+        logo.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRwNsJToes3vMaHCm2DHoiwJP4X7aZ-1m4Og&s";
+        logo.onload = ()=>{
+            pdf.addImage(logo,'PNG',20,20,50,50);
+            pdf.setFontSize(18);
+            pdf.text("Faturam Gold",80,50);
+            pdf.addImage(imgData,'PNG',20,90,imgWidth,imgHeight);
+            pdf.save("FaturamGold_Proje.pdf");
+        }
+    });
+}
+
+// PNG oluştur
+function exportPNG(){
+    html2canvas(document.getElementById('excelTable')).then(canvas=>{
+        const link=document.createElement('a');
+        link.download='FaturamGold_Proje.png';
+        link.href=canvas.toDataURL();
+        link.click();
+    });
+}
+
+// URL oluştur
+function generateURL(){
+    const dataStr = encodeURIComponent(btoa(JSON.stringify(tableData)));
+    const base = window.location.href.split('?')[0];
+    const url = `${base}?data=${dataStr}`;
+    prompt("Paylaşabileceğiniz link:", url);
+}
+
+// Sütun genişletme (basılı tutarak)
+function makeResizable(table){
+    table.querySelectorAll('th').forEach((th,index)=>{
+        if(index === 0) return; // sıra numarası hariç
+        th.style.position='relative';
+        const grip = document.createElement('div');
+        grip.style.width='5px';
+        grip.style.position='absolute';
+        grip.style.top='0';
+        grip.style.right='0';
+        grip.style.bottom='0';
+        grip.style.cursor='col-resize';
+        th.appendChild(grip);
+
+        let startX, startWidth;
+        grip.addEventListener('mousedown', (e)=>{
+            startX = e.pageX;
+            startWidth = th.offsetWidth;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        function onMouseMove(e){
+            const diff = e.pageX - startX;
+            const newWidth = startWidth + diff;
+            th.style.width = newWidth + 'px';
+            // Aynı sütundaki tüm hücrelerin genişliğini ayarla
+            table.querySelectorAll('tr').forEach(tr=>{
+                if(tr.cells[index]) tr.cells[index].style.width = newWidth + 'px';
+            });
+        }
+
+        function onMouseUp(){
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+    });
+}
+
+window.onload = loadFromURL;
+</script>
+</body>
+</html>
