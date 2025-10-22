@@ -29,7 +29,7 @@ footer { text-align:center; padding:12px; background:#ffd700; color:white; font-
 
 <header>
     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRwNsJToes3vMaHCm2DHoiwJP4X7aZ-1m4Og&s" alt="Logo">
-    <h1>Faturam Gold Premium</h1>
+    <h1>Faturam Gold Pro</h1>
 </header>
 
 <div id="controls">
@@ -73,7 +73,7 @@ footer { text-align:center; padding:12px; background:#ffd700; color:white; font-
     <button onclick="generateURL()">URL Oluştur</button>
 </div>
 
-<footer>Faturam Gold Premium</footer>
+<footer>Faturam Gold Pro</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -183,7 +183,7 @@ const shareOptions=document.getElementById('shareOptions');
 shareBtn.addEventListener('click',()=>{ shareOptions.style.display = shareOptions.style.display==='flex'?'none':'flex'; });
 
 // PDF/PNG/URL fonksiyonları
-function exportPDF(){ html2canvas(document.getElementById('excelTable')).then(canvas=>{ const imgData=canvas.toDataURL('image/png'); const pdf=new jsPDF('p','pt','a4'); const pageWidth=pdf.internal.pageSize.getWidth(); const imgWidth=pageWidth-40; const imgHeight=canvas.height*imgWidth/canvas.width; const logo=new Image(); logo.src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRwNsJToes3vMaHCm2DHoiwJP4X7aZ-1m4Og&s"; logo.onload=()=>{ pdf.addImage(logo,'PNG',20,20,50,50); pdf.setFontSize(18); pdf.text("Faturam Gold Premium",80,50); pdf.addImage(imgData,'PNG',20,90,imgWidth,imgHeight); pdf.save("FaturamGold_Proje.pdf"); } }); }
+function exportPDF(){ html2canvas(document.getElementById('excelTable')).then(canvas=>{ const imgData=canvas.toDataURL('image/png'); const pdf=new jsPDF('p','pt','a4'); const pageWidth=pdf.internal.pageSize.getWidth(); const imgWidth=pageWidth-40; const imgHeight=canvas.height*imgWidth/canvas.width; const logo=new Image(); logo.src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRwNsJToes3vMaHCm2DHoiwJP4X7aZ-1m4Og&s"; logo.onload=()=>{ pdf.addImage(logo,'PNG',20,20,50,50); pdf.setFontSize(18); pdf.text("Faturam Gold Pro",80,50); pdf.addImage(imgData,'PNG',20,90,imgWidth,imgHeight); pdf.save("FaturamGold_Proje.pdf"); } }); }
 function exportPNG(){ html2canvas(document.getElementById('excelTable')).then(canvas=>{ const link=document.createElement('a'); link.download='FaturamGold_Proje.png'; link.href=canvas.toDataURL(); link.click(); }); }
 function generateURL(){ const dataStr=encodeURIComponent(btoa(JSON.stringify(tableData))); const base=window.location.href.split('?')[0]; const url=`${base}?data=${dataStr}`; prompt("Paylaşabileceğiniz link:",url); }
 
